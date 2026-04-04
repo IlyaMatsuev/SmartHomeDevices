@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <driver/rtc_io.h>
 
 const uint8_t MOTION_SENSOR_PIN = 32;
 const uint64_t MOTION_SENSOR_CALIBRATION_TIMEOUT_MS = 1000 * 30;
