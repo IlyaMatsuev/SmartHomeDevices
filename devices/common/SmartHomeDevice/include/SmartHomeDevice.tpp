@@ -114,7 +114,7 @@ void SmartHomeDevice<TControls, TMeasurements>::onMqttMessage(String topic, Json
             mqttClient.subscribe(getUpdateControlsTopic().c_str());
             mqttClient.unsubscribe(PAIR_REQUEST_REPLY_TOPIC);
         } else {
-            Serial.printf("Pairing got rejected with message: %s\n", data["message"]);
+            Serial.printf("Pairing got rejected with message: %s\n", data["message"].as<String>().c_str());
         }
     }
     if (topic == getUpdateControlsTopic()) {

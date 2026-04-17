@@ -21,10 +21,13 @@ void PresenceSensorDevice::setup(const gpio_num_t motionSensorPin, const uint64_
 void PresenceSensorDevice::loop() {
     while (!isPaired()) {
         SmartHomeDevice::loop();
+        delay(500);
     }
 
-    sendControlsSync();
-    sendMeasurementsUpdate();
+    if (this->controlsProvider->isOn()) {
+        sendControlsSync();
+        sendMeasurementsUpdate();
+    }
 }
 
 void PresenceSensorDevice::sleep(uint64_t durationMs) {
