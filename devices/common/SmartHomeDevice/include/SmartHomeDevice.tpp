@@ -1,45 +1,18 @@
 #include "SmartHomeDevice.h"
 
-const int MQTT_CONNECT_RETRY_DELAY = 5000;
-const int PAIR_REQUEST_INTERVAL = 5000;
 
-const char* PAIR_REQUEST_TOPIC = "home/devices/pair";
-const char* PAIR_REQUEST_REPLY_TOPIC = "home/devices/pair/reply";
-const char* UPDATE_CONTROLS_TOPIC = "home/devices/%s/controls/update";
-const char* SYNC_CONTROLS_TOPIC = "home/devices/%s/controls/sync";
-const char* UPDATE_MEASUREMENTS_TOPIC = "home/devices/%s/measurements/update";
+static const int MQTT_CONNECT_RETRY_DELAY = 5000;
+static const int PAIR_REQUEST_INTERVAL = 5000;
+
+static const char* PAIR_REQUEST_TOPIC = "home/devices/pair";
+static const char* PAIR_REQUEST_REPLY_TOPIC = "home/devices/pair/reply";
+static const char* UPDATE_CONTROLS_TOPIC = "home/devices/%s/controls/update";
+static const char* SYNC_CONTROLS_TOPIC = "home/devices/%s/controls/sync";
+static const char* UPDATE_MEASUREMENTS_TOPIC = "home/devices/%s/measurements/update";
 
 
-JsonDocument& PayloadProvider::getPayload(bool wrap) {
-    payload.clear();
-
-    JsonObject root = payload.to<JsonObject>();
-    if (wrap) {
-        JsonObject values = root[payloadField].to<JsonObject>();
-        build(values);
-    } else {
-        build(root);
-    }
-    return payload;
-}
-
-void ControlsProvider::toggleControlsSync(bool sync) {
-    this->controlsSynced = !sync;
-}
-
-bool ControlsProvider::controlsUpdated() {
-    return this->controlsSynced;
-}
-
-void MeasurementsProvider::toggleIntervalUpdates(bool enable) {
-    this->enableIntervalUpdates = enable;
-}
-
-bool MeasurementsProvider::intervalUpdatesEnabled() {
-    return this->enableIntervalUpdates;
-}
-
-void SmartHomeDevice::setup(const NetworkSettings& networkSettings, const MqttSettings& mqttSettings) {
+template<typename TControls, typename TMeasurements>
+void SmartHomeDevice<TControls, TMeasurements>::setup(const NetworkSettings& networkSettings, const MqttSettings& mqttSettings) {
     this->networkSettings = networkSettings;
     this->mqttSettings = mqttSettings;
 
@@ -60,7 +33,8 @@ void SmartHomeDevice::setup(const NetworkSettings& networkSettings, const MqttSe
     connectMqtt(this->mqttSettings.username, this->mqttSettings.password);
 }
 
-void SmartHomeDevice::loop() {
+template<typename TControls, typename TMeasurements>
+void SmartHomeDevice<TControls, TMeasurements>::loop() {
     if (!WiFi.isConnected()) {
         connectWiFi(this->networkSettings.wifiSsid, this->networkSettings.wifiPassword);
     }
@@ -86,7 +60,19 @@ void SmartHomeDevice::loop() {
     }
 }
 
-void SmartHomeDevice::connectWiFi(const char* ssid, const char* password) {
+template<typename TControls, typename TMeasurements>
+void SmartHomeDevice<TControls, TMeasurements>::sleep(uint64_t durationMs) {
+    if (durationMs > 0) {
+        Serial.printf("Preparing to sleep for %llu ms\n", durationMs);
+        esp_sleep_enable_timer_wakeup(durationMs * 1000);
+    }
+    Serial.println("Going to sleep...");
+    Serial.flush();
+    esp_deep_sleep_start();
+}
+
+template<typename TControls, typename TMeasurements>
+void SmartHomeDevice<TControls, TMeasurements>::connectWiFi(const char* ssid, const char* password) {
     WiFi.begin(ssid, password);
     Serial.print("Connecting to Wi-Fi");
     while (!WiFi.isConnected()) {
@@ -97,7 +83,8 @@ void SmartHomeDevice::connectWiFi(const char* ssid, const char* password) {
     Serial.println("\nConnected to Wi-Fi, IP: " + deviceIp.toString());
 }
 
-void SmartHomeDevice::connectMqtt(const char* username, const char* password) {
+template<typename TControls, typename TMeasurements>
+void SmartHomeDevice<TControls, TMeasurements>::connectMqtt(const char* username, const char* password) {
     Serial.printf("\nConnecting to mqtt://%s:%d as %s\n", this->mqttSettings.hostname, this->mqttSettings.port, deviceName);
     while (!mqttClient.connected()) {
         if (mqttClient.connect(deviceName, username, password)) {
@@ -111,7 +98,8 @@ void SmartHomeDevice::connectMqtt(const char* username, const char* password) {
     }
 }
 
-void SmartHomeDevice::onMqttMessage(String topic, JsonObject data) {
+template<typename TControls, typename TMeasurements>
+void SmartHomeDevice<TControls, TMeasurements>::onMqttMessage(String topic, JsonObject data) {
     if (topic == PAIR_REQUEST_REPLY_TOPIC) {
         // { "accepted": true, "deviceId": "xxx", "updateInterval": 10000, "message": "example" }
         if (data["accepted"]) {
@@ -136,11 +124,13 @@ void SmartHomeDevice::onMqttMessage(String topic, JsonObject data) {
     }
 }
 
-bool SmartHomeDevice::isPaired() const {
+template<typename TControls, typename TMeasurements>
+bool SmartHomeDevice<TControls, TMeasurements>::isPaired() const {
     return deviceId.length() > 0;
 }
 
-void SmartHomeDevice::sendPairRequest() {
+template<typename TControls, typename TMeasurements>
+void SmartHomeDevice<TControls, TMeasurements>::sendPairRequest() {
     JsonDocument request;
     request["deviceIp"] = deviceIp.toString();
     request["deviceName"] = deviceName;
@@ -157,7 +147,8 @@ void SmartHomeDevice::sendPairRequest() {
     mqttClient.publish(PAIR_REQUEST_TOPIC, requestJson);
 }
 
-void SmartHomeDevice::sendMeasurementsUpdate() {
+template<typename TControls, typename TMeasurements>
+void SmartHomeDevice<TControls, TMeasurements>::sendMeasurementsUpdate() {
     char requestJson[MAX_MQTT_PACKET_SIZE];
     serializeJson(measurementsProvider->getPayload(), requestJson);
     Serial.printf("Sending measurements update: %s\n", requestJson);
@@ -165,7 +156,8 @@ void SmartHomeDevice::sendMeasurementsUpdate() {
     mqttClient.publish(getUpdateMeasurementsTopic().c_str(), requestJson);
 }
 
-void SmartHomeDevice::sendControlsSync() {
+template<typename TControls, typename TMeasurements>
+void SmartHomeDevice<TControls, TMeasurements>::sendControlsSync() {
     char requestJson[MAX_MQTT_PACKET_SIZE];
     serializeJson(controlsProvider->getPayload(), requestJson);
     Serial.printf("Sending controls sync: %s\n", requestJson);
@@ -173,15 +165,18 @@ void SmartHomeDevice::sendControlsSync() {
     mqttClient.publish(getSyncControlsTopic().c_str(), requestJson);
 }
 
-unsigned long SmartHomeDevice::msSinceLastPairRequest() {
+template<typename TControls, typename TMeasurements>
+unsigned long SmartHomeDevice<TControls, TMeasurements>::msSinceLastPairRequest() {
     return millis() - lastPairRequest;
 }
 
-unsigned long SmartHomeDevice::msSinceLastUpdate() {
+template<typename TControls, typename TMeasurements>
+unsigned long SmartHomeDevice<TControls, TMeasurements>::msSinceLastUpdate() {
     return millis() - lastUpdate;
 }
 
-String SmartHomeDevice::getUpdateControlsTopic() {
+template<typename TControls, typename TMeasurements>
+String SmartHomeDevice<TControls, TMeasurements>::getUpdateControlsTopic() {
     if (updateControlsTopic.length() == 0) {
         char topic[128];
         snprintf(topic, sizeof(topic), UPDATE_CONTROLS_TOPIC, deviceId.c_str());
@@ -190,7 +185,8 @@ String SmartHomeDevice::getUpdateControlsTopic() {
     return updateControlsTopic;
 }
 
-String SmartHomeDevice::getSyncControlsTopic() {
+template<typename TControls, typename TMeasurements>
+String SmartHomeDevice<TControls, TMeasurements>::getSyncControlsTopic() {
     if (syncControlsTopic.length() == 0) {
         char topic[128];
         snprintf(topic, sizeof(topic), SYNC_CONTROLS_TOPIC, deviceId.c_str());
@@ -199,7 +195,8 @@ String SmartHomeDevice::getSyncControlsTopic() {
     return syncControlsTopic;
 }
 
-String SmartHomeDevice::getUpdateMeasurementsTopic() {
+template<typename TControls, typename TMeasurements>
+String SmartHomeDevice<TControls, TMeasurements>::getUpdateMeasurementsTopic() {
     if (updateMeasurementsTopic.length() == 0) {
         char topic[128];
         snprintf(topic, sizeof(topic), UPDATE_MEASUREMENTS_TOPIC, deviceId.c_str());
