@@ -35,4 +35,4 @@ pio device monitor --baud 115200
 ## Current Devices
 
 - **ps-fans** — Temperature-reactive fan controller (Dallas DS18B20 sensor + PWM fan). Has multi-level speed thresholds with hysteresis.
-- **room-presence-sensor** — Motion detection via PIR sensor (early stage, not yet integrated with SmartHomeDevice framework).
+- **presence-sensor** — Motion detection via PIR sensor.
