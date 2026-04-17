@@ -1,3 +1,5 @@
+#include <esp_bt.h>
+
 #include "SmartHomeDevice.h"
 
 
@@ -20,7 +22,7 @@ void SmartHomeDevice<TControls, TMeasurements>::setup(const NetworkSettings& net
 
     mqttClient.setServer(this->mqttSettings.hostname, this->mqttSettings.port);
     mqttClient.setCallback([this](char* topic, byte* messageBytes, unsigned int length) {
-        Serial.printf("\nMessage received [%s]: %.*s\n", topic, length, messageBytes);
+        Serial.printf("\nMessage received [%s]: %.*s\n\n", topic, length, messageBytes);
 
         JsonDocument data;
         DeserializationError error = deserializeJson(data, messageBytes, length);
@@ -31,6 +33,11 @@ void SmartHomeDevice<TControls, TMeasurements>::setup(const NetworkSettings& net
         }
     });
     connectMqtt(this->mqttSettings.username, this->mqttSettings.password);
+}
+
+template<typename TControls, typename TMeasurements>
+void SmartHomeDevice<TControls, TMeasurements>::disableBluetooth() {
+    esp_bt_controller_disable();
 }
 
 template<typename TControls, typename TMeasurements>
@@ -142,7 +149,7 @@ void SmartHomeDevice<TControls, TMeasurements>::sendPairRequest() {
 
     char requestJson[MAX_MQTT_PACKET_SIZE];
     serializeJson(request, requestJson);
-    Serial.printf("Sending pairing request: %s\n", requestJson);
+    Serial.printf("\nSending pairing request: %s\n", requestJson);
 
     mqttClient.publish(PAIR_REQUEST_TOPIC, requestJson);
 }

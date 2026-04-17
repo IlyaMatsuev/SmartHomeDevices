@@ -44,6 +44,7 @@ public:
     virtual ~SmartHomeDevice() = default;
 
     virtual void setup(const NetworkSettings& networkSettings, const MqttSettings& mqttSettings);
+    virtual void disableBluetooth();
     virtual void loop();
     virtual void sleep(uint64_t durationMs);
 

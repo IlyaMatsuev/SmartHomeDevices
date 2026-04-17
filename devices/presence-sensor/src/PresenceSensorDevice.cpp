@@ -5,6 +5,8 @@
 void PresenceSensorDevice::setup(const gpio_num_t motionSensorPin, const uint64_t calibrationTimeoutMs) {
     Serial.println();
 
+    SmartHomeDevice::disableBluetooth();
+
     this->motionSensorPin = motionSensorPin;
     pinMode(motionSensorPin, INPUT);
 
