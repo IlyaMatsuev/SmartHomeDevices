@@ -4,7 +4,7 @@ Battery-friendly room presence sensor built on an ESP32 + HC-SR501 PIR. Reports 
 
 ## Build and flash
 
-Run from this directory (`devices/presence-sensor/`):
+Run from this directory (`devices/presence-pir-sensor/`):
 
 ```bash
 # Build
@@ -24,8 +24,10 @@ On every wake cycle the device:
 1. Reads the PIR output pin (`digitalRead`). HIGH means the sensor is currently reporting motion.
 2. Feeds the reading into `PresenceSensorMeasurements::setMotionDetection`, which applies a software cooldown (see below).
 3. Connects to Wi-Fi and MQTT, pairs with the hub if not already paired, and publishes:
-  - a controls sync (`home/devices/{id}/controls/sync`)
-  - a measurements update (`home/devices/{id}/measurements/update`) containing `{"motion": true|false}`
+
+- a controls sync (`home/devices/{id}/controls/sync`)
+- a measurements update (`home/devices/{id}/measurements/update`) containing `{"motion": true|false}`
+
 4. Cleanly disconnects MQTT + Wi-Fi and goes back to deep sleep.
 
 ### Wake sources
@@ -33,7 +35,7 @@ On every wake cycle the device:
 Deep sleep ends on whichever comes first:
 
 - **Timer** — always set, every `SLEEP_DURATION_MS` (default 60 s).
-- **External (ext0) motion wake** — armed only when the current reported state is *not* motion. The ESP32 wakes immediately when the PIR pin goes HIGH, so transitions from "no motion" to "motion" are reported with near-zero latency instead of waiting up to a full sleep interval.
+- **External (ext0) motion wake** — armed only when the current reported state is _not_ motion. The ESP32 wakes immediately when the PIR pin goes HIGH, so transitions from "no motion" to "motion" are reported with near-zero latency instead of waiting up to a full sleep interval.
 
 When motion is already reported, the timer is the only wake source - the device doesn't need to re-detect motion that it's already reporting.
 
@@ -59,11 +61,11 @@ The device exposes one control:
 
 ### Wiring
 
-| HC-SR501 pin | ESP32 pin       | Notes                                              |
-| ------------ | --------------- | -------------------------------------------------- |
-| VCC          | 5V / VIN        | HC-SR501 needs 5 V input; its onboard LDO feeds the PIR |
-| GND          | GND             |                                                    |
-| OUT          | GPIO 32         | `MOTION_SENSOR_PIN` in `src/main.cpp`              |
+| HC-SR501 pin | ESP32 pin | Notes                                                   |
+| ------------ | --------- | ------------------------------------------------------- |
+| VCC          | 5V / VIN  | HC-SR501 needs 5 V input; its onboard LDO feeds the PIR |
+| GND          | GND       |                                                         |
+| OUT          | GPIO 32   | `MOTION_SENSOR_PIN` in `src/main.cpp`                   |
 
 GPIO 32 is an RTC-capable pin, which is required because the firmware uses it as an `ext0` deep-sleep wake source. If you change the pin, pick another RTC GPIO (0, 2, 4, 12–15, 25–27, 32–39).
 
@@ -81,13 +83,13 @@ If you can't tell which pot is which, trigger the sensor and time how long OUT s
 
 Everything tunable lives at the top of `src/main.cpp`:
 
-| Constant                              | Default    | Meaning                                                        |
-| ------------------------------------- | ---------- | -------------------------------------------------------------- |
-| `MOTION_SENSOR_PIN`                   | 32         | ESP32 GPIO wired to HC-SR501 OUT                               |
-| `MOTION_SENSOR_CALIBRATION_TIMEOUT_MS`| 30 000     | PIR warm-up / settling time on cold boot only                  |
-| `MOTION_COOLDOWN_MS`                  | 120 000    | Software cooldown — minimum time `motion:true` is reported     |
-| `SLEEP_DURATION_MS`                   | 60 000     | Timer wake interval                                            |
-| `DEVICE_NAME`                         | `presence-sensor` | MQTT client id / name in pair request                   |
-| `DEVICE_TYPE`                         | `motion-sensor`   | Device type sent in pair request                        |
+| Constant                               | Default               | Meaning                                                    |
+| -------------------------------------- | --------------------- | ---------------------------------------------------------- |
+| `MOTION_SENSOR_PIN`                    | 32                    | ESP32 GPIO wired to HC-SR501 OUT                           |
+| `MOTION_SENSOR_CALIBRATION_TIMEOUT_MS` | 30 000                | PIR warm-up / settling time on cold boot only              |
+| `MOTION_COOLDOWN_MS`                   | 120 000               | Software cooldown — minimum time `motion:true` is reported |
+| `SLEEP_DURATION_MS`                    | 60 000                | Timer wake interval                                        |
+| `DEVICE_NAME`                          | `presence-pir-sensor` | MQTT client id / name in pair request                      |
+| `DEVICE_TYPE`                          | `motion-sensor`       | Device type sent in pair request                           |
 
 Network / MQTT credentials come from `devices/common/Secrets/src/secrets.cpp` (not committed). The contract is declared in `devices/common/Secrets/include/secrets.h`.

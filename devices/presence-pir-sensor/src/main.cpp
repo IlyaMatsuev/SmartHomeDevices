@@ -11,7 +11,7 @@ const uint64_t MOTION_COOLDOWN_MS = 1000 * 60 * 2;
 
 const uint64_t SLEEP_DURATION_MS = 1000 * 60;
 
-const char* DEVICE_NAME = "presence-sensor";
+const char* DEVICE_NAME = "presence-pir-sensor";
 const char* DEVICE_TYPE = "motion-sensor";
 
 
