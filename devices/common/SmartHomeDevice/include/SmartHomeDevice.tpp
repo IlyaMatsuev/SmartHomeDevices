@@ -69,6 +69,16 @@ void SmartHomeDevice<TControls, TMeasurements>::loop() {
 
 template<typename TControls, typename TMeasurements>
 void SmartHomeDevice<TControls, TMeasurements>::sleep(uint64_t durationMs) {
+    // Delay to send all MQTT messages before disconnecting
+    delay(500);
+
+    if (mqttClient.connected()) {
+        mqttClient.disconnect();
+    }
+    if (WiFi.isConnected()) {
+        WiFi.disconnect(true);
+    }
+
     if (durationMs > 0) {
         Serial.printf("Preparing to sleep for %llu ms\n", durationMs);
         esp_sleep_enable_timer_wakeup(durationMs * 1000);

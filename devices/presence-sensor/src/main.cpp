@@ -7,7 +7,7 @@
 
 const uint8_t MOTION_SENSOR_PIN = 32;
 const uint64_t MOTION_SENSOR_CALIBRATION_TIMEOUT_MS = 1000 * 30;
-const uint64_t MOTION_COOLDOWN_MS = 1000 * 60 * 5;
+const uint64_t MOTION_COOLDOWN_MS = 1000 * 60 * 2;
 
 const uint64_t SLEEP_DURATION_MS = 1000 * 60;
 
