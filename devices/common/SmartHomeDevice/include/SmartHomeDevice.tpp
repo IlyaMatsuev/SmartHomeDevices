@@ -29,7 +29,7 @@ void SmartHomeDevice<TControls, TMeasurements>::setup(const NetworkSettings& net
         if (error) {
             Serial.printf("Failed to deserialize JSON: %s\n", error.c_str());
         } else {
-            this->onMqttMessage(String(topic), data["data"].as<JsonObject>());
+            this->onMqttMessage(String(topic), data.as<JsonObject>());
         }
     });
     connectMqtt(this->mqttSettings.username, this->mqttSettings.password);
