@@ -141,6 +141,9 @@ void SmartHomeDevice<TControls, TMeasurements>::onMqttMessage(String topic, Json
     }
 }
 
+/**
+ * Returns `true` if the device is connected to the My Home Hub, and can exchange the data
+ */
 template<typename TControls, typename TMeasurements>
 bool SmartHomeDevice<TControls, TMeasurements>::isPaired() const {
     return deviceId.length() > 0;
@@ -182,16 +185,25 @@ void SmartHomeDevice<TControls, TMeasurements>::sendControlsSync() {
     mqttClient.publish(getSyncControlsTopic().c_str(), requestJson);
 }
 
+/**
+ * How many milliseconds has passed since the last attempt to send a pairing request
+ */
 template<typename TControls, typename TMeasurements>
 unsigned long SmartHomeDevice<TControls, TMeasurements>::msSinceLastPairRequest() {
     return millis() - lastPairRequest;
 }
 
+/**
+ * How many milliseconds has passed since the last measurements update
+ */
 template<typename TControls, typename TMeasurements>
 unsigned long SmartHomeDevice<TControls, TMeasurements>::msSinceLastUpdate() {
     return millis() - lastUpdate;
 }
 
+/**
+ * Returns the MQTT topic name to update the controls. Used for sending the controls to the My Home Hub
+ */
 template<typename TControls, typename TMeasurements>
 String SmartHomeDevice<TControls, TMeasurements>::getUpdateControlsTopic() {
     if (updateControlsTopic.length() == 0) {
@@ -202,6 +214,9 @@ String SmartHomeDevice<TControls, TMeasurements>::getUpdateControlsTopic() {
     return updateControlsTopic;
 }
 
+/**
+ * Returns the MQTT topic name to sync the controls. Used for receiving the current controls from the My Home Hub
+ */
 template<typename TControls, typename TMeasurements>
 String SmartHomeDevice<TControls, TMeasurements>::getSyncControlsTopic() {
     if (syncControlsTopic.length() == 0) {
@@ -212,6 +227,9 @@ String SmartHomeDevice<TControls, TMeasurements>::getSyncControlsTopic() {
     return syncControlsTopic;
 }
 
+/**
+ * Returns the MQTT topic name to update the measurements. Used for sending the measurements to the My Home Hub
+ */
 template<typename TControls, typename TMeasurements>
 String SmartHomeDevice<TControls, TMeasurements>::getUpdateMeasurementsTopic() {
     if (updateMeasurementsTopic.length() == 0) {
