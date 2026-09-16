@@ -6,10 +6,10 @@
 
 class DoorLockDevice : public SmartHomeDevice<DoorLockControls, DoorLockMeasurements> {
 public:
-    DoorLockDevice(const char* deviceName, const char* deviceType, uint64_t defaultOpenTimeoutMs) : SmartHomeDevice(
+    DoorLockDevice(const char* deviceName, const char* deviceType, uint64_t defaultUnlockTimeoutMs) : SmartHomeDevice(
         deviceName,
         deviceType,
-        new DoorLockControls(defaultOpenTimeoutMs),
+        new DoorLockControls(defaultUnlockTimeoutMs),
         new DoorLockMeasurements(),
         NO_UPDATE_INTERVAL
     ) {}

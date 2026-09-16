@@ -1,35 +1,53 @@
 #include "DoorLockControls.h"
 
 
-DoorLockControls::DoorLockControls(uint64_t defaultOpenTimeoutMs) {
+DoorLockControls::DoorLockControls(uint64_t defaultUnlockTimeoutMs) {
     this->on = true;
-    this->open = false;
-    this->openTimeoutMs = defaultOpenTimeoutMs;
+    this->unlocked = false;
+    this->unlockTimeoutMs = defaultUnlockTimeoutMs;
+    this->lastUnlockedAt = 0;
 }
 
 void DoorLockControls::onUpdate(JsonObject& payload) {
     if (payload["on"].is<bool>()) {
         this->on = payload["on"];
     }
-    if (payload["open"].is<bool>()) {
-        this->open = payload["open"];
+    if (payload["unlocked"].is<bool>()) {
+        this->unlocked = payload["unlocked"];
     }
-    if (payload["openTimeoutMs"].is<uint64_t>()) {
-        this->openTimeoutMs = payload["openTimeoutMs"];
+    if (payload["unlockTimeoutMs"].is<uint64_t>()) {
+        uint64_t unlockTimeoutMs = payload["unlockTimeoutMs"].as<uint64_t>();
+        unlockTimeoutMs = unlockTimeoutMs < MIN_UNLOCK_TIMEOUT_MS ? MIN_UNLOCK_TIMEOUT_MS : unlockTimeoutMs;
+        unlockTimeoutMs = unlockTimeoutMs > MAX_UNLOCK_TIMEOUT_MS ? MAX_UNLOCK_TIMEOUT_MS : unlockTimeoutMs;
+        this->unlockTimeoutMs = unlockTimeoutMs;
     }
+}
+
+void DoorLockControls::lock() {
+    this->unlocked = false;
+    this->lastUnlockedAt = 0;
+    this->toggleControlsSync(true);
 }
 
 bool DoorLockControls::isOn() {
     return this->on;
 }
 
-bool DoorLockControls::isOpen() {
-    return this->open;
+bool DoorLockControls::isUnlocked() {
+    return this->unlocked;
+}
+
+bool DoorLockControls::unnlockTimedOut() {
+    if (this->lastUnlockedAt == 0) {
+        return true;
+    }
+    unsigned long msSinceUnlocked = millis() - this->lastUnlockedAt;
+    return msSinceUnlocked >= this->unlockTimeoutMs;
 }
 
 void DoorLockControls::build(JsonObject& controls) {
     controls["$override"] = true;
     controls["on"] = this->on;
-    controls["open"] = this->open;
-    controls["openTimeoutMs"] = this->openTimeoutMs;
+    controls["unlocked"] = this->unlocked;
+    controls["unlockTimeoutMs"] = this->unlockTimeoutMs;
 }

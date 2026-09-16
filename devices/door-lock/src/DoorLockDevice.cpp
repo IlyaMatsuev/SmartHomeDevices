@@ -14,10 +14,19 @@ void DoorLockDevice::setup() {
 }
 
 void DoorLockDevice::loop() {
-    if (this->controlsProvider->isOn() && this->controlsProvider->isOpen()) {
-        // TODO: Open the gate for the lock
-        // TODO: Switch the "open" toggle when the the openTimeoutMs is done
-    }
     SmartHomeDevice::loop();
     delay(500);
+
+    if (this->controlsProvider->isOn()) {
+        if (this->controlsProvider->isUnlocked()) {
+            // TODO: Open the gate for the lock
+        } else {
+            // TODO: Close the gate for the lock
+        }
+        
+    }
+
+    if (this->controlsProvider->isUnlocked() && this->controlsProvider->unnlockTimedOut()) {
+        this->controlsProvider->lock();
+    }
 }

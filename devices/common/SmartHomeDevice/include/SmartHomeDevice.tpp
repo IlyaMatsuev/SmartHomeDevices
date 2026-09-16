@@ -202,7 +202,7 @@ unsigned long SmartHomeDevice<TControls, TMeasurements>::msSinceLastUpdate() {
 }
 
 /**
- * Returns the MQTT topic name to update the controls. Used for sending the controls to the My Home Hub
+ * Returns the MQTT topic name to update the controls. Used for receiving the controls from the My Home Hub
  */
 template<typename TControls, typename TMeasurements>
 String SmartHomeDevice<TControls, TMeasurements>::getUpdateControlsTopic() {
@@ -215,7 +215,7 @@ String SmartHomeDevice<TControls, TMeasurements>::getUpdateControlsTopic() {
 }
 
 /**
- * Returns the MQTT topic name to sync the controls. Used for receiving the current controls from the My Home Hub
+ * Returns the MQTT topic name to sync the controls. Used for sending the current controls to the My Home Hub
  */
 template<typename TControls, typename TMeasurements>
 String SmartHomeDevice<TControls, TMeasurements>::getSyncControlsTopic() {
