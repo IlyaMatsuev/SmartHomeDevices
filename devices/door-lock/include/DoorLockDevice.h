@@ -32,6 +32,7 @@ struct LedColor {
             // Green, no blink interval
             return { 0, 40, 0, 0 };
         }
+        return { 0, 0, 0, 0 };
     }
 };
 
@@ -50,6 +51,10 @@ public:
     virtual void loop() override;
 protected:
     void signal(const DeviceStatus& status);
+    void updateLockState();
+
+    void onPair(JsonObject& payload) override;
+    void onConnecting() override;
 private:
     gpio_num_t lockGatePin;
     gpio_num_t statusLedPin;

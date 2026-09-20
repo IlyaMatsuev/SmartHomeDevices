@@ -9,7 +9,6 @@ public:
 
     // TODO: Try to create a way to provide a type for this payload parameter
     virtual void onUpdate(JsonObject& payload) = 0;
-    virtual void onPair(JsonObject& payload);
     void toggleControlsSync(bool sync = true);
     bool controlsUpdated();
 private:

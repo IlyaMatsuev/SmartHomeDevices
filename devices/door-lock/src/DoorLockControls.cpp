@@ -26,12 +26,6 @@ void DoorLockControls::onUpdate(JsonObject& payload) {
     }
 }
 
-void DoorLockControls::onPair(JsonObject& payload) {
-    ControlsProvider::onPair(payload);
-    // When pairing with a hub, the door must always be initially locked, no matter the state on the hub
-    lock();
-}
-
 void DoorLockControls::lock() {
     this->unlocked = false;
     this->lastUnlockedAt = 0;

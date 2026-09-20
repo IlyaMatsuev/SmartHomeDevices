@@ -21,6 +21,30 @@ void DoorLockDevice::setup(const gpio_num_t lockGatePin, const gpio_num_t status
     SmartHomeDevice::setup(networkSettings, mqttSettings);
 }
 
+void DoorLockDevice::loop() {
+    SmartHomeDevice::loop();
+    delay(50);
+
+    updateLockState();
+    updateStatus();
+}
+
+void DoorLockDevice::onPair(JsonObject& payload) {
+    SmartHomeDevice::onPair(payload);
+    // When pairing with a hub, the door must always be initially locked, no matter the state on the hub
+    this->controlsProvider->lock();
+}
+
+void DoorLockDevice::onConnecting() {
+    SmartHomeDevice::onConnecting();
+    signal(DeviceStatus::Connecting);
+
+    // Lock the door when connection with WiFi/MQTT is lost
+    if (this->controlsProvider->isUnlocked()) {
+        updateLockState();
+    }
+}
+
 void DoorLockDevice::signal(const DeviceStatus& status) {
     LedColor color  = LedColor::of(status);
     bool colorOn = color.blinkIntervalMs == 0 || (millis() / color.blinkIntervalMs) % 2 == 0;
@@ -31,24 +55,17 @@ void DoorLockDevice::signal(const DeviceStatus& status) {
     neopixelWrite(this->statusLedPin, red, green, blue);
 }
 
-void DoorLockDevice::loop() {
-    // TODO: If it was unlocked by the update from hub in the previous iteration,
-    //  and then WIFI/MQTT connection dropped,
-    //  the pin would stay unlocked until the device is connected to Wifi/MQTT or the device loses power
-    SmartHomeDevice::loop();
-    delay(50);
-
+void DoorLockDevice::updateLockState() {
+    // Lock on timeout even if the device is "off"
     if (this->controlsProvider->isUnlocked() && this->controlsProvider->unlockTimedOut()) {
         Serial.printf("Timeout is done, locking\n");
         this->controlsProvider->lock();
     }
 
-    digitalWrite(this->lockGatePin, !(this->controlsProvider->isOn() && this->controlsProvider->isUnlocked()) ? HIGH : LOW);
-
-    updateStatus();
+    bool unlocked = this->controlsProvider->isOn() && this->controlsProvider->isUnlocked();
+    digitalWrite(this->lockGatePin, unlocked ? LOW : HIGH);
 }
 
-// TODO: Switch back to Connecting status if WiFi/MQTT suddenly stopped working
 void DoorLockDevice::updateStatus() {
     if (!isPaired()) {
         signal(DeviceStatus::Connecting);

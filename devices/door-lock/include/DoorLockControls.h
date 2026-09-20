@@ -10,7 +10,6 @@ public:
     DoorLockControls(uint64_t defaultUnlockTimeoutMs);
 
     void onUpdate(JsonObject& payload) override;
-    void onPair(JsonObject& payload) override;
     void lock();
     bool isOn();
     bool isUnlocked();
