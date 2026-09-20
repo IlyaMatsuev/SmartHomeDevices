@@ -14,6 +14,9 @@ void DoorLockControls::onUpdate(JsonObject& payload) {
     }
     if (payload["unlocked"].is<bool>()) {
         this->unlocked = payload["unlocked"];
+        if (this->unlocked) {
+            this->lastUnlockedAt = millis();
+        }
     }
     if (payload["unlockTimeoutMs"].is<uint64_t>()) {
         uint64_t unlockTimeoutMs = payload["unlockTimeoutMs"].as<uint64_t>();
@@ -21,6 +24,12 @@ void DoorLockControls::onUpdate(JsonObject& payload) {
         unlockTimeoutMs = unlockTimeoutMs > MAX_UNLOCK_TIMEOUT_MS ? MAX_UNLOCK_TIMEOUT_MS : unlockTimeoutMs;
         this->unlockTimeoutMs = unlockTimeoutMs;
     }
+}
+
+void DoorLockControls::onPair(JsonObject& payload) {
+    ControlsProvider::onPair(payload);
+    // When pairing with a hub, the door must always be initially locked, no matter the state on the hub
+    lock();
 }
 
 void DoorLockControls::lock() {

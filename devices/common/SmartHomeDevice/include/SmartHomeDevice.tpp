@@ -124,7 +124,7 @@ void SmartHomeDevice<TControls, TMeasurements>::onMqttMessage(String topic, Json
             updateIntervalMs = data["updateInterval"];
 
             JsonObject deviceControls = data["controls"].as<JsonObject>();
-            this->controlsProvider->onUpdate(deviceControls);
+            this->controlsProvider->onPair(deviceControls);
 
             Serial.printf("Received pairing acceptance (%s), with update interval: %d\n", deviceId.c_str(), updateIntervalMs);
 
