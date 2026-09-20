@@ -46,7 +46,7 @@ bool DoorLockControls::isUnlocked() {
     return this->unlocked;
 }
 
-bool DoorLockControls::unnlockTimedOut() {
+bool DoorLockControls::unlockTimedOut() {
     if (this->lastUnlockedAt == 0) {
         return true;
     }

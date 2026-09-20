@@ -14,6 +14,8 @@ public:
         NO_UPDATE_INTERVAL
     ) {}
 
-    virtual void setup();
+    virtual void setup(const gpio_num_t lockGatePin);
     virtual void loop() override;
+private:
+    gpio_num_t lockGatePin;
 };

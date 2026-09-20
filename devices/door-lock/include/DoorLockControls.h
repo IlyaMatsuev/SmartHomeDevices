@@ -14,7 +14,7 @@ public:
     void lock();
     bool isOn();
     bool isUnlocked();
-    bool unnlockTimedOut();
+    bool unlockTimedOut();
 protected:
     void build(JsonObject& controls) override;
 private:
