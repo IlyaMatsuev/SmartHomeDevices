@@ -57,14 +57,16 @@ void SmartHomeDevice<TControls, TMeasurements>::loop() {
         lastPairRequest = millis();
     }
 
-    if (isPaired() && measurementsProvider->intervalUpdatesEnabled() && msSinceLastUpdate() >= updateIntervalMs) {
+    bool intervalUpdateDue = measurementsProvider->intervalUpdatesEnabled() && msSinceLastUpdate() >= updateIntervalMs;
+    if (isPaired() && (intervalUpdateDue || measurementsProvider->isPendingUpdate())) {
         sendMeasurementsUpdate();
+        measurementsProvider->requestSendUpdate(false);
         lastUpdate = millis();
     }
 
-    if (isPaired() && !controlsProvider->controlsUpdated()) {
+    if (isPaired() && controlsProvider->isPendingUpdate()) {
         sendControlsSync();
-        controlsProvider->toggleControlsSync(false);
+        controlsProvider->requestSendUpdate(false);
     }
 }
 

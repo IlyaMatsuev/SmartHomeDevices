@@ -31,7 +31,7 @@ void PsFansControls::onUpdate(JsonObject& payload) {
 
         if (speedLevels["reset"].as<bool>()) {
             this->fanSpeedLevels = this->getDefaultFanSpeedLevels();
-            this->toggleControlsSync();
+            this->requestSendUpdate();
         } else {
             for (JsonPair kv : speedLevels) {
                 if (strcmp(kv.key().c_str(), "reset") == 0) {

@@ -39,10 +39,10 @@ struct LedColor {
 
 class DoorLockDevice : public SmartHomeDevice<DoorLockControls, DoorLockMeasurements> {
 public:
-    DoorLockDevice(const char* deviceName, const char* deviceType, uint64_t defaultUnlockTimeoutMs) : SmartHomeDevice(
+    DoorLockDevice(const char* deviceName, const char* deviceType, uint64_t defaultUnlockTimeout) : SmartHomeDevice(
         deviceName,
         deviceType,
-        new DoorLockControls(defaultUnlockTimeoutMs),
+        new DoorLockControls(defaultUnlockTimeout),
         new DoorLockMeasurements(),
         NO_UPDATE_INTERVAL
     ) {}

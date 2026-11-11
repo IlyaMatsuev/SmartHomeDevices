@@ -33,6 +33,8 @@ void DoorLockDevice::onPair(JsonObject& payload) {
     SmartHomeDevice::onPair(payload);
     // When pairing with a hub, the door must always be initially locked, no matter the state on the hub
     this->controlsProvider->lock();
+    // Report the initial measurements state
+    this->measurementsProvider->requestSendUpdate();
 }
 
 void DoorLockDevice::onConnecting() {
@@ -57,13 +59,15 @@ void DoorLockDevice::signal(const DeviceStatus& status) {
 
 void DoorLockDevice::updateLockState() {
     // Lock on timeout even if the device is "off"
-    if (this->controlsProvider->isUnlocked() && this->controlsProvider->unlockTimedOut()) {
+    if (this->controlsProvider->isUnlocked() && (this->controlsProvider->unlockTimedOut() || !this->controlsProvider->isOn())) {
         Serial.printf("Timeout is done, locking\n");
         this->controlsProvider->lock();
     }
 
     bool unlocked = this->controlsProvider->isOn() && this->controlsProvider->isUnlocked();
     digitalWrite(this->lockGatePin, unlocked ? LOW : HIGH);
+
+    this->measurementsProvider->setUnlocked(this->controlsProvider->isUnlocked());
 }
 
 void DoorLockDevice::updateStatus() {

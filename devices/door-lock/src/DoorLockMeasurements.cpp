@@ -2,6 +2,16 @@
 
 DoorLockMeasurements::DoorLockMeasurements() {
     toggleIntervalUpdates(false);
+    this->unlocked = false;
 }
 
-void DoorLockMeasurements::build(JsonObject& measurements) {}
+void DoorLockMeasurements::setUnlocked(bool unlocked) {
+    if (this->unlocked != unlocked) {
+        this->unlocked = unlocked;
+        requestSendUpdate();
+    }
+}
+
+void DoorLockMeasurements::build(JsonObject& measurements) {
+    measurements["unlocked"] = this->unlocked;
+}
