@@ -6,9 +6,7 @@ void DoorLockDevice::setup(const gpio_num_t lockGatePin, const gpio_num_t status
     this->lockGatePin = lockGatePin;
     this->statusLedPin = statusLedPin;
 
-    // The relay input needs 5V for HIGH state (microcontroller's pin cannot give more than 3.3V),
-    //  so invert the logic: HIGH -> locked, LOW -> unlocked
-    digitalWrite(this->lockGatePin, HIGH);
+    this->updateLockGatePin(false);
     pinMode(this->lockGatePin, OUTPUT);
 
     signal(DeviceStatus::Booting);
@@ -64,10 +62,14 @@ void DoorLockDevice::updateLockState() {
         this->controlsProvider->lock();
     }
 
-    bool unlocked = this->controlsProvider->isOn() && this->controlsProvider->isUnlocked();
-    digitalWrite(this->lockGatePin, unlocked ? LOW : HIGH);
+    this->updateLockGatePin(this->controlsProvider->isOn() && this->controlsProvider->isUnlocked());
 
     this->measurementsProvider->setUnlocked(this->controlsProvider->isUnlocked());
+}
+
+void DoorLockDevice::updateLockGatePin(bool unlocked) {
+    // Relay coil is switched by a MOSSFET. HIGH -> unlocked, LOW -> locked
+    digitalWrite(this->lockGatePin, unlocked ? HIGH : LOW);
 }
 
 void DoorLockDevice::updateStatus() {

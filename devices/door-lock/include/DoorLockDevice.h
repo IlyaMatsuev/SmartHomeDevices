@@ -52,6 +52,7 @@ public:
 protected:
     void signal(const DeviceStatus& status);
     void updateLockState();
+    void updateLockGatePin(bool unlocked);
 
     void onPair(JsonObject& payload) override;
     void onConnecting() override;
