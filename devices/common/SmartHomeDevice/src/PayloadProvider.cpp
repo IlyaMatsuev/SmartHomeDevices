@@ -13,3 +13,11 @@ JsonDocument& PayloadProvider::getPayload(bool wrap) {
     }
     return payload;
 }
+
+void PayloadProvider::requestSendUpdate(bool request) {
+    this->pendingUpdate = request;
+}
+
+bool PayloadProvider::isPendingUpdate() {
+    return this->pendingUpdate;
+}

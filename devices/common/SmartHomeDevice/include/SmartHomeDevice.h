@@ -57,6 +57,9 @@ protected:
     void sendMeasurementsUpdate();
     void sendControlsSync();
 
+    virtual void onPair(JsonObject& payload);
+    virtual void onConnecting();
+
 private:
     NetworkSettings networkSettings;
     MqttSettings mqttSettings;

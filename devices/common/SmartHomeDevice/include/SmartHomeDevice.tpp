@@ -5,6 +5,7 @@
 
 static const int MQTT_CONNECT_RETRY_DELAY = 5000;
 static const int PAIR_REQUEST_INTERVAL = 5000;
+static const int CONNECT_INTERVAL_STEP_MS = 100;
 
 static const char* PAIR_REQUEST_TOPIC = "home/devices/pair";
 static const char* PAIR_REQUEST_REPLY_TOPIC = "home/devices/pair/reply";
@@ -29,7 +30,7 @@ void SmartHomeDevice<TControls, TMeasurements>::setup(const NetworkSettings& net
         if (error) {
             Serial.printf("Failed to deserialize JSON: %s\n", error.c_str());
         } else {
-            this->onMqttMessage(String(topic), data["data"].as<JsonObject>());
+            this->onMqttMessage(String(topic), data.as<JsonObject>());
         }
     });
     connectMqtt(this->mqttSettings.username, this->mqttSettings.password);
@@ -56,19 +57,31 @@ void SmartHomeDevice<TControls, TMeasurements>::loop() {
         lastPairRequest = millis();
     }
 
-    if (isPaired() && measurementsProvider->intervalUpdatesEnabled() && msSinceLastUpdate() >= updateIntervalMs) {
+    bool intervalUpdateDue = measurementsProvider->intervalUpdatesEnabled() && msSinceLastUpdate() >= updateIntervalMs;
+    if (isPaired() && (intervalUpdateDue || measurementsProvider->isPendingUpdate())) {
         sendMeasurementsUpdate();
+        measurementsProvider->requestSendUpdate(false);
         lastUpdate = millis();
     }
 
-    if (isPaired() && !controlsProvider->controlsUpdated()) {
+    if (isPaired() && controlsProvider->isPendingUpdate()) {
         sendControlsSync();
-        controlsProvider->toggleControlsSync(false);
+        controlsProvider->requestSendUpdate(false);
     }
 }
 
 template<typename TControls, typename TMeasurements>
 void SmartHomeDevice<TControls, TMeasurements>::sleep(uint64_t durationMs) {
+    // Delay to send all MQTT messages before disconnecting
+    delay(500);
+
+    if (mqttClient.connected()) {
+        mqttClient.disconnect();
+    }
+    if (WiFi.isConnected()) {
+        WiFi.disconnect(true);
+    }
+
     if (durationMs > 0) {
         Serial.printf("Preparing to sleep for %llu ms\n", durationMs);
         esp_sleep_enable_timer_wakeup(durationMs * 1000);
@@ -83,7 +96,8 @@ void SmartHomeDevice<TControls, TMeasurements>::connectWiFi(const char* ssid, co
     WiFi.begin(ssid, password);
     Serial.print("Connecting to Wi-Fi");
     while (!WiFi.isConnected()) {
-        delay(100);
+        onConnecting();
+        delay(CONNECT_INTERVAL_STEP_MS);
         Serial.print(".");
     }
     deviceIp = WiFi.localIP();
@@ -94,13 +108,19 @@ template<typename TControls, typename TMeasurements>
 void SmartHomeDevice<TControls, TMeasurements>::connectMqtt(const char* username, const char* password) {
     Serial.printf("\nConnecting to mqtt://%s:%d as %s\n", this->mqttSettings.hostname, this->mqttSettings.port, deviceName);
     while (!mqttClient.connected()) {
+        onConnecting();
         if (mqttClient.connect(deviceName, username, password)) {
             mqttClient.setBufferSize(MAX_MQTT_PACKET_SIZE);
             mqttClient.subscribe(PAIR_REQUEST_REPLY_TOPIC);
             sendPairRequest();
         } else {
-            Serial.printf("Failed to connect: %d\n, trying again in %d ms", mqttClient.state(), MQTT_CONNECT_RETRY_DELAY);
-            delay(MQTT_CONNECT_RETRY_DELAY);
+            Serial.printf("Failed to connect: %d, trying again in %d ms", mqttClient.state(), MQTT_CONNECT_RETRY_DELAY);
+
+            // Constantly ping the onConnecting() hook when the delay is too long
+            for (int waited = 0; waited < MQTT_CONNECT_RETRY_DELAY; waited += CONNECT_INTERVAL_STEP_MS) {
+                onConnecting();
+                delay(CONNECT_INTERVAL_STEP_MS);
+            }
         }
     }
 }
@@ -114,7 +134,7 @@ void SmartHomeDevice<TControls, TMeasurements>::onMqttMessage(String topic, Json
             updateIntervalMs = data["updateInterval"];
 
             JsonObject deviceControls = data["controls"].as<JsonObject>();
-            this->controlsProvider->onUpdate(deviceControls);
+            onPair(deviceControls);
 
             Serial.printf("Received pairing acceptance (%s), with update interval: %d\n", deviceId.c_str(), updateIntervalMs);
 
@@ -131,6 +151,9 @@ void SmartHomeDevice<TControls, TMeasurements>::onMqttMessage(String topic, Json
     }
 }
 
+/**
+ * Returns `true` if the device is connected to the My Home Hub, and can exchange the data
+ */
 template<typename TControls, typename TMeasurements>
 bool SmartHomeDevice<TControls, TMeasurements>::isPaired() const {
     return deviceId.length() > 0;
@@ -172,16 +195,39 @@ void SmartHomeDevice<TControls, TMeasurements>::sendControlsSync() {
     mqttClient.publish(getSyncControlsTopic().c_str(), requestJson);
 }
 
+/**
+ * Called when a device is succesfully paired to a Hub, can be overriden
+ */
+template<typename TControls, typename TMeasurements>
+void SmartHomeDevice<TControls, TMeasurements>::onPair(JsonObject& payload) {
+    this->controlsProvider->onUpdate(payload);
+}
+
+/**
+ * Called when a device is attempting to connect to WiFi or MQTT, can be overriden
+ */
+template<typename TControls, typename TMeasurements>
+void SmartHomeDevice<TControls, TMeasurements>::onConnecting() {}
+
+/**
+ * How many milliseconds has passed since the last attempt to send a pairing request
+ */
 template<typename TControls, typename TMeasurements>
 unsigned long SmartHomeDevice<TControls, TMeasurements>::msSinceLastPairRequest() {
     return millis() - lastPairRequest;
 }
 
+/**
+ * How many milliseconds has passed since the last measurements update
+ */
 template<typename TControls, typename TMeasurements>
 unsigned long SmartHomeDevice<TControls, TMeasurements>::msSinceLastUpdate() {
     return millis() - lastUpdate;
 }
 
+/**
+ * Returns the MQTT topic name to update the controls. Used for receiving the controls from the My Home Hub
+ */
 template<typename TControls, typename TMeasurements>
 String SmartHomeDevice<TControls, TMeasurements>::getUpdateControlsTopic() {
     if (updateControlsTopic.length() == 0) {
@@ -192,6 +238,9 @@ String SmartHomeDevice<TControls, TMeasurements>::getUpdateControlsTopic() {
     return updateControlsTopic;
 }
 
+/**
+ * Returns the MQTT topic name to sync the controls. Used for sending the current controls to the My Home Hub
+ */
 template<typename TControls, typename TMeasurements>
 String SmartHomeDevice<TControls, TMeasurements>::getSyncControlsTopic() {
     if (syncControlsTopic.length() == 0) {
@@ -202,6 +251,9 @@ String SmartHomeDevice<TControls, TMeasurements>::getSyncControlsTopic() {
     return syncControlsTopic;
 }
 
+/**
+ * Returns the MQTT topic name to update the measurements. Used for sending the measurements to the My Home Hub
+ */
 template<typename TControls, typename TMeasurements>
 String SmartHomeDevice<TControls, TMeasurements>::getUpdateMeasurementsTopic() {
     if (updateMeasurementsTopic.length() == 0) {
